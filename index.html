@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Workout Tracker Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #334155;
+            --accent-blue: #38bdf8;
+            --accent-green: #22c55e;
+            --accent-orange: #f97316;
+            --accent-purple: #a855f7;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --border-color: #475569;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            padding-bottom: 75px;
+        }
+
+        /* 상단 헤더 */
+        .header {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(8px);
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--accent-blue);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .date-navigator {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-secondary);
+            padding: 8px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .date-navigator input[type="date"] {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 16px;
+            font-weight: 600;
+            outline: none;
+        }
+
+        /* 컨테이너 */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        /* 하단 탭 바 */
+        .nav-tabs {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            display: flex;
+            border-top: 1px solid var(--border-color);
+            z-index: 100;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px 0;
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+        }
+
+        .tab-btn.active {
+            color: var(--accent-blue);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 대시보드 카드 */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .dash-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+        }
+
+        .dash-title {
+            font-size: 12px;
+            color: var(--text-sub);
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .dash-value {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        /* 타이머 전용 탭 스타일 */
+        .full-timer-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 32px 20px;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .large-timer-display {
+            font-size: 64px;
+            font-weight: 900;
+            color: var(--accent-green);
+            font-mono: tabular-nums;
+            margin: 20px 0;
+            letter-spacing: 2px;
+        }
+
+        .timer-quick-btns {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .timer-control-btns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        /* 일반 버튼 */
+        button {
+            background: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        button:active {
+            opacity: 0.8;
+            transform: scale(0.98);
+        }
+
+        button.primary {
+            background: var(--accent-blue);
+            color: #000;
+            border: none;
+        }
+
+        button.success {
+            background: var(--accent-green);
+            color: #000;
+            border: none;
+        }
+
+        button.danger {
+            background: #ef4444;
+            color: #fff;
+            border: none;
+        }
+
+        /* 프리셋 */
+        .preset-section {
+            margin-bottom: 16px;
+        }
+
+        .preset-chips {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .preset-chip {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 13px;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        /* 운동 카운터 카드 */
+        .exercise-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .exercise-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .exercise-name {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .set-table-header {
+            display: grid;
+            grid-template-columns: 40px 1fr 1fr 60px 30px;
+            gap: 8px;
+            font-size: 11px;
+            color: var(--text-sub);
+            text-align: center;
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+
+        .set-row {
+            display: grid;
+            grid-template-columns: 40px 1fr 1fr 60px 30px;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .set-num {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-sub);
+            text-align: center;
+        }
+
+        input[type="number"], input[type="text"] {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 15px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .check-btn {
+            background: var(--bg-card);
+            color: var(--text-sub);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 0;
+            font-size: 12px;
+            font-weight: 700;
+            width: 100%;
+        }
+
+        .check-btn.done {
+            background: var(--accent-green);
+            color: #000;
+            border: none;
+        }
+
+        .add-set-btn {
+            width: 100%;
+            margin-top: 8px;
+            background: transparent;
+            border: 1px dashed var(--border-color);
+            color: var(--text-sub);
+        }
+
+        .add-exercise-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .chart-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .log-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .backup-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: 24px;
+        }
+
+        .backup-bar button {
+            flex: 1;
+            background: var(--bg-secondary);
+            color: var(--text-sub);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 헤더 -->
+    <div class="header">
+        <div class="header-title">⚡ Workout Tracker Pro</div>
+        <div class="date-navigator">
+            <button onclick="changeDate(-1)">◀</button>
+            <input type="date" id="currentDate" onchange="loadDateData()">
+            <button onclick="changeDate(1)">▶</button>
+        </div>
+    </div>
+
+    <!-- 본문 컨테이너 -->
+    <div class="container">
+
+        <!-- [TAB 1] 오늘의 운동 -->
+        <div id="tab-today" class="tab-content active">
+            <!-- 요약 대시보드 -->
+            <div class="dashboard-grid">
+                <div class="dash-card">
+                    <div class="dash-title">오늘의 총 볼륨</div>
+                    <div class="dash-value" id="totalVolume">0 <span style="font-size:13px; color:var(--text-sub)">kg</span></div>
+                </div>
+                <div class="dash-card">
+                    <div class="dash-title">완료 세트 수</div>
+                    <div class="dash-value" id="completedSets">0 <span style="font-size:13px; color:var(--text-sub)">세트</span></div>
+                </div>
+            </div>
+
+            <!-- 자주 쓰는 운동 퀵 추가 -->
+            <div class="preset-section">
+                <div style="font-size:12px; color:var(--text-sub); font-weight:700; margin-bottom:8px;">빠른 종목 추가</div>
+                <div class="preset-chips">
+                    <div class="preset-chip" onclick="quickAdd('스미스 벤치프레스')">+ 스미스 벤치</div>
+                    <div class="preset-chip" onclick="quickAdd('턱걸이')">+ 턱걸이</div>
+                    <div class="preset-chip" onclick="quickAdd('랫풀다운')">+ 랫풀다운</div>
+                    <div class="preset-chip" onclick="quickAdd('레그프레스')">+ 레그프레스</div>
+                    <div class="preset-chip" onclick="quickAdd('시티드 로우')">+ 시티드 로우</div>
+                </div>
+            </div>
+
+            <!-- 운동 카드 동적 리스트 -->
+            <div id="exerciseList"></div>
+
+            <!-- 직접 입력 추가 -->
+            <div class="add-exercise-box">
+                <input type="text" id="newExerciseInput" placeholder="직접 입력 (예: 케이블 크로스)" style="text-align:left;">
+                <button class="primary" onclick="addCustomExercise()">추가</button>
+            </div>
+        </div>
+
+        <!-- [TAB 2] 타이머 전용 탭 -->
+        <div id="tab-timer" class="tab-content">
+            <div class="full-timer-card">
+                <div style="font-size:13px; color:var(--text-sub); font-weight:700;">REST TIMER</div>
+                <div class="large-timer-display" id="timerDisplay">01:30</div>
+
+                <div class="timer-quick-btns">
+                    <button onclick="startTimer(60)">1분</button>
+                    <button onclick="startTimer(90)">1.5분</button>
+                    <button onclick="startTimer(120)">2분</button>
+                </div>
+
+                <div class="timer-quick-btns" style="margin-bottom:20px;">
+                    <button onclick="adjustTimer(15)">+15초</button>
+                    <button onclick="adjustTimer(30)">+30초</button>
+                    <button onclick="adjustTimer(-15)">-15초</button>
+                </div>
+
+                <div class="timer-control-btns">
+                    <button class="success" onclick="toggleTimerState()" id="timerToggleBtn">시작 / 일시정지</button>
+                    <button class="danger" onclick="resetTimer()">초기화</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- [TAB 3] 운동 일지 -->
+        <div id="tab-history" class="tab-content">
+            <div style="font-size:16px; font-weight:800; margin-bottom:12px; color:var(--accent-blue);">📅 최근 운동 기록</div>
+            <div id="historyList"></div>
+        </div>
+
+        <!-- [TAB 4] 통계 분석 -->
+        <div id="tab-stats" class="tab-content">
+            <div class="chart-card">
+                <div style="font-size:14px; color:var(--text-sub); font-weight:700; margin-bottom:12px;">부위별 볼륨 비중 (오늘)</div>
+                <canvas id="volumeChart" height="200"></canvas>
+            </div>
+
+            <div class="backup-bar">
+                <button onclick="exportData()">💾 백업 내보내기</button>
+                <button onclick="document.getElementById('importFile').click()">📂 데이터 불러오기</button>
+                <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 하단 탭 바 -->
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('today', this)">
+            <span>🏋️‍♂️</span>
+            <span>오늘의 운동</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('timer', this)">
+            <span>⏱️</span>
+            <span>타이머</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('history', this)">
+            <span>📋</span>
+            <span>운동 일지</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('stats', this)">
+            <span>📊</span>
+            <span>통합 통계</span>
+        </button>
+    </div>
+
+    <script>
+        let currentDateStr = new Date().toISOString().substring(0, 10);
+        let appData = {};
+        let timerInterval = null;
+        let timerSeconds = 90;
+        let isTimerRunning = false;
+        let myChart = null;
+
+        function init() {
+            try {
+                const stored = localStorage.getItem('workoutDataPro');
+                if (stored) appData = JSON.parse(stored);
+            } catch (e) {}
+            document.getElementById('currentDate').value = currentDateStr;
+            render();
+            updateTimerDisplay();
+        }
+
+        window.onload = init;
+
+        /* 자동 저장 및 스토리지 연결 */
+        function saveData() {
+            try {
+                localStorage.setItem('workoutDataPro', JSON.stringify(appData));
+            } catch (e) {}
+            updateDashboard();
+        }
+
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('tab-' + tabId).classList.add('active');
+            btn.classList.add('active');
+
+            if (tabId === 'history') renderHistory();
+            if (tabId === 'stats') updateDashboard();
+        }
+
+        function loadDateData() {
+            currentDateStr = document.getElementById('currentDate').value;
+            render();
+        }
+
+        function changeDate(days) {
+            let d = new Date(currentDateStr);
+            d.setDate(d.getDate() + days);
+            currentDateStr = d.toISOString().substring(0, 10);
+            document.getElementById('currentDate').value = currentDateStr;
+            render();
+        }
+
+        function getTodayData() {
+            if (!appData[currentDateStr]) appData[currentDateStr] = [];
+            return appData[currentDateStr];
+        }
+
+        function quickAdd(name) {
+            const list = getTodayData();
+            list.push({
+                id: Date.now(),
+                name: name,
+                sets: [{ weight: 40, reps: 10, completed: false }]
+            });
+            saveData();
+            render();
+        }
+
+        function addCustomExercise() {
+            const input = document.getElementById('newExerciseInput');
+            const val = input.value.trim();
+            if (!val) return;
+            quickAdd(val);
+            input.value = '';
+        }
+
+        function deleteExercise(id) {
+            appData[currentDateStr] = getTodayData().filter(e => e.id !== id);
+            saveData();
+            render();
+        }
+
+        function addSet(exId) {
+            const ex = getTodayData().find(e => e.id === exId);
+            if (ex) {
+                const last = ex.sets[ex.sets.length - 1];
+                ex.sets.push({
+                    weight: last ? last.weight : 0,
+                    reps: last ? last.reps : 0,
+                    completed: false
+                });
+                saveData();
+                render();
+            }
+        }
+
+        function deleteSet(exId, idx) {
+            const ex = getTodayData().find(e => e.id === exId);
+            if (ex && ex.sets.length > 1) {
+                ex.sets.splice(idx, 1);
+                saveData();
+                render();
+            }
+        }
+
+        function updateSet(exId, idx, field, val) {
+            const ex = getTodayData().find(e => e.id === exId);
+            if (ex && ex.sets[idx]) {
+                ex.sets[idx][field] = Number(val);
+                saveData();
+            }
+        }
+
+        function toggleSet(exId, idx) {
+            const ex = getTodayData().find(e => e.id === exId);
+            if (ex && ex.sets[idx]) {
+                ex.sets[idx].completed = !ex.sets[idx].completed;
+                saveData();
+                render();
+                if (ex.sets[idx].completed) {
+                    startTimer(90);
+                }
+            }
+        }
+
+        function updateDashboard() {
+            let totalVol = 0;
+            let totalSets = 0;
+            const exList = getTodayData();
+
+            exList.forEach(ex => {
+                ex.sets.forEach(s => {
+                    if (s.completed) {
+                        totalVol += (s.weight * s.reps);
+                        totalSets++;
+                    }
+                });
+            });
+
+            document.getElementById('totalVolume').innerHTML = `${totalVol.toLocaleString()} <span style="font-size:13px; color:var(--text-sub)">kg</span>`;
+            document.getElementById('completedSets').innerHTML = `${totalSets} <span style="font-size:13px; color:var(--text-sub)">세트</span>`;
+
+            renderChart(exList);
+        }
+
+        function render() {
+            const container = document.getElementById('exerciseList');
+            container.innerHTML = '';
+            const exList = getTodayData();
+
+            exList.forEach(ex => {
+                const card = document.createElement('div');
+                card.className = 'exercise-card';
+
+                let rows = '';
+                ex.sets.forEach((s, i) => {
+                    rows += `
+                        <div class="set-row">
+                            <span class="set-num">${i + 1}</span>
+                            <input type="number" value="${s.weight || ''}" placeholder="kg" oninput="updateSet(${ex.id}, ${i}, 'weight', this.value)">
+                            <input type="number" value="${s.reps || ''}" placeholder="회" oninput="updateSet(${ex.id}, ${i}, 'reps', this.value)">
+                            <button class="check-btn ${s.completed ? 'done' : ''}" onclick="toggleSet(${ex.id}, ${i})">${s.completed ? '완료' : '대기'}</button>
+                            <button style="background:none; border:none; color:#ef4444;" onclick="deleteSet(${ex.id}, ${i})">✕</button>
+                        </div>
+                    `;
+                });
+
+                card.innerHTML = `
+                    <div class="exercise-header">
+                        <span class="exercise-name">${ex.name}</span>
+                        <button style="background:none; border:none; color:var(--text-sub);" onclick="deleteExercise(${ex.id})">삭제</button>
+                    </div>
+                    <div class="set-table-header">
+                        <span>SET</span><span>KG</span><span>REPS</span><span>STATUS</span><span></span>
+                    </div>
+                    ${rows}
+                    <button class="add-set-btn" onclick="addSet(${ex.id})">+ 세트 추가</button>
+                `;
+                container.appendChild(card);
+            });
+
+            updateDashboard();
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('historyList');
+            container.innerHTML = '';
+            const keys = Object.keys(appData).sort().reverse();
+
+            if (keys.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-sub); text-align:center; padding:20px;">기록된 운동이 없습니다.</div>';
+                return;
+            }
+
+            keys.forEach(date => {
+                const list = appData[date];
+                if (list.length === 0) return;
+
+                let vol = 0;
+                let details = [];
+                list.forEach(ex => {
+                    let setCnt = ex.sets.filter(s => s.completed).length;
+                    ex.sets.forEach(s => { if (s.completed) vol += (s.weight * s.reps); });
+                    if (setCnt > 0) details.push(`${ex.name} (${setCnt}세트)`);
+                });
+
+                const item = document.createElement('div');
+                item.className = 'log-item';
+                item.innerHTML = `
+                    <div style="font-weight:700; color:var(--accent-blue); font-size:14px; margin-bottom:4px;">${date}</div>
+                    <div style="font-size:13px; color:var(--text-main); margin-bottom:4px;">${details.join(', ') || '완료 세트 없음'}</div>
+                    <div style="font-size:12px; color:var(--text-sub);">총 볼륨: ${vol.toLocaleString()} kg</div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        /* 타이머 관련 로직 */
+        function startTimer(sec) {
+            clearInterval(timerInterval);
+            timerSeconds = sec;
+            isTimerRunning = true;
+            updateTimerDisplay();
+            timerInterval = setInterval(() => {
+                timerSeconds--;
+                updateTimerDisplay();
+                if (timerSeconds <= 0) {
+                    clearInterval(timerInterval);
+                    isTimerRunning = false;
+                    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                }
+            }, 1000);
+        }
+
+        function toggleTimerState() {
+            if (isTimerRunning) {
+                clearInterval(timerInterval);
+                isTimerRunning = false;
+            } else {
+                if (timerSeconds > 0) startTimer(timerSeconds);
+            }
+        }
+
+        function adjustTimer(sec) {
+            timerSeconds = Math.max(0, timerSeconds + sec);
+            updateTimerDisplay();
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            isTimerRunning = false;
+            timerSeconds = 90;
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            const m = Math.floor(timerSeconds / 60);
+            const s = timerSeconds % 60;
+            document.getElementById('timerDisplay').innerText = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        }
+
+        function renderChart(exList) {
+            const ctx = document.getElementById('volumeChart').getContext('2d');
+            const labels = [];
+            const data = [];
+
+            exList.forEach(ex => {
+                let vol = 0;
+                ex.sets.forEach(s => { if (s.completed) vol += (s.weight * s.reps); });
+                if (vol > 0) {
+                    labels.push(ex.name);
+                    data.push(vol);
+                }
+            });
+
+            if (myChart) myChart.destroy();
+
+            myChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels.length ? labels : ['기록 없음'],
+                    datasets: [{
+                        data: data.length ? data : [1],
+                        backgroundColor: ['#38bdf8', '#22c55e', '#f97316', '#a855f7', '#ec4899', '#64748b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        function exportData() {
+            const str = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
+            const a = document.createElement('a');
+            a.href = str;
+            a.download = `workout_backup_${currentDateStr}.json`;
+            a.click();
+        }
+
+        function importData(e) {
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    appData = JSON.parse(evt.target.result);
+                    saveData();
+                    render();
+                    alert('성공적으로 불러왔습니다!');
+                } catch (err) {
+                    alert('올바른 파일이 아닙니다.');
+                }
+            };
+            reader.readAsText(e.target.files[0]);
+        }
+    </script>
+</body>
+</html>
