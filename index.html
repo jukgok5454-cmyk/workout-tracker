@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>워크아웃 트래커 - 세트별 개별 중량 입력</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif; 
+            line-height: 1.5; 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            padding: 15px; 
+            padding-bottom: env(safe-area-inset-bottom, 30px);
+            background-color: #f2f4f7; 
+            color: #1c1e21;
+        }
+        section { 
+            background: white; 
+            padding: 16px; 
+            border-radius: 14px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); 
+            margin-bottom: 16px; 
+        }
+        h2 { 
+            margin-top: 0; 
+            margin-bottom: 12px;
+            font-size: 1.15rem;
+            color: #111; 
+            border-bottom: 1px solid #eee; 
+            padding-bottom: 8px; 
+        }
+        .flex-group { 
+            display: flex; 
+            gap: 8px; 
+            flex-wrap: wrap; 
+            margin-bottom: 12px; 
+            align-items: center; 
+        }
+        input, select { 
+            padding: 10px 12px; 
+            border: 1px solid #d1d5db; 
+            border-radius: 8px; 
+            flex: 1; 
+            min-width: 100px; 
+            font-size: 16px; 
+            background-color: #fff;
+            color: #111;
+            -webkit-appearance: none;
+        }
+        select {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 16px;
+            padding-right: 32px;
+        }
+        button { 
+            padding: 12px 16px; 
+            cursor: pointer; 
+            border: none; 
+            border-radius: 8px; 
+            background-color: #007aff; 
+            color: white; 
+            font-weight: 600; 
+            font-size: 15px;
+            transition: opacity 0.2s; 
+            touch-action: manipulation;
+        }
+        button:active { opacity: 0.7; }
+        button.stop { background-color: #ff3b30; }
+        
+        .timer-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .timer-buttons { display: flex; gap: 6px; }
+        .timer-btn { background-color: #34c759; padding: 10px 14px; font-size: 14px; }
+        .timer-cancel { background-color: #8e8e93; padding: 10px 12px; font-size: 14px; }
+        #timerDisplay { 
+            font-size: 1.6rem; 
+            font-weight: 700; 
+            color: #ff3b30; 
+            font-variant-numeric: tabular-nums;
+            min-width: 75px;
+            text-align: right;
+        }
+        
+        #prevRecordPreview {
+            background-color: #eef6ff;
+            border-left: 4px solid #007aff;
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 0.88rem;
+            color: #1c1e21;
+            display: none;
+        }
+        #prevRecordPreview strong { color: #0056b3; }
+        .prev-item { margin: 3px 0; }
+
+        /* 세트별 개별 입력 행 스타일 */
+        #setInputsContainer { 
+            display: flex;
+            flex-direction: column;
+            gap: 8px; 
+            background: #f8f9fa; 
+            padding: 12px; 
+            border-radius: 8px; 
+            margin-bottom: 12px; 
+            display: none; 
+        }
+        .set-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #fff;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+        }
+        .set-row span {
+            font-weight: 600;
+            font-size: 0.9rem;
+            min-width: 45px;
+            color: #4b5563;
+        }
+        .set-row input {
+            padding: 6px 8px;
+            font-size: 15px;
+        }
+        
+        .dashboard { display: grid; grid-template-columns: 1fr 1.2fr; gap: 16px; }
+        @media (max-width: 850px) { 
+            .dashboard { grid-template-columns: 1fr; }
+            .ex-select-box { max-width: 100% !important; flex-basis: 100%; }
+        }
+        
+        .chart-container { height: 280px; position: relative; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { border: 1px solid #e5e7eb; padding: 8px 6px; text-align: center; }
+        th { background-color: #f8f9fa; position: sticky; top: 0; z-index: 1; }
+        .group-header { background-color: #e9ecef; font-weight: bold; text-align: left; padding-left: 12px; color: #333; }
+        .btn-del { background-color: #ffcc00; color: #111; padding: 6px 10px; font-size: 0.75rem; border-radius: 6px; }
+    </style>
+</head>
+<body>
+
+    <!-- 1. 메트로놈 & 휴식 타이머 -->
+    <section>
+        <h2>⏱️ 템포 & 휴식</h2>
+        <button id="metroBtn" onclick="toggleMetronome()" style="width: 100%;">메트로놈 시작 (60 BPM)</button>
+        
+        <div class="timer-row">
+            <div class="timer-buttons">
+                <button class="timer-btn" onclick="startTimer(60)">1분</button>
+                <button class="timer-btn" onclick="startTimer(120)">2분</button>
+                <button class="timer-btn" onclick="startTimer(180)">3분</button>
+                <button class="timer-cancel" onclick="stopTimer()">정지</button>
+            </div>
+            <span id="timerDisplay">00:00</span>
+        </div>
+    </section>
+
+    <!-- 2. 운동 기록 추가 -->
+    <section>
+        <h2>💪 운동 기록 추가</h2>
+        <div class="flex-group">
+            <select id="exSelect" class="ex-select-box" onchange="handleExerciseSelect()" style="max-width: 240px;">
+                <option value="">-- 기존 종목 선택 (직접 입력) --</option>
+            </select>
+            <input type="text" id="exName" placeholder="종목명 입력 (예: 스쿼트)" oninput="showPreviousRecords(this.value)">
+        </div>
+
+        <div id="prevRecordPreview"></div>
+
+        <div class="flex-group">
+            <input type="number" id="exSets" inputmode="numeric" pattern="[0-9]*" placeholder="총 세트수 입력" oninput="generateSetInputs()">
+        </div>
+        
+        <!-- 세트별 중량 및 횟수 입력 컨테이너 -->
+        <div id="setInputsContainer"></div>
+
+        <button onclick="addWorkoutLog()" style="width: 100%;">기록 저장</button>
+    </section>
+
+    <!-- 3. 대시보드: 그래프 및 상세 히스토리 -->
+    <div class="dashboard">
+        <section>
+            <h2>📈 종목별 볼륨 차트</h2>
+            <select id="chartFilter" onchange="updateChart()" style="width: 100%; margin-bottom: 12px;">
+                <option value="">분석할 종목 선택</option>
+            </select>
+            <div class="chart-container">
+                <canvas id="volumeChart"></canvas>
+            </div>
+        </section>
+
+        <section style="max-height: 550px; overflow-y: auto; -webkit-overflow-scrolling: touch;">
+            <h2>📊 종목별 상세 히스토리</h2>
+            <table id="logTable">
+                <thead>
+                    <tr>
+                        <th>날짜</th>
+                        <th>상세(세트별 중량×횟수)</th>
+                        <th>총 볼륨</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody id="logBody"></tbody>
+            </table>
+            <button onclick="clearAllLogs()" style="margin-top: 15px; background-color: #8e8e93; width: 100%; font-size: 0.85rem;">기록 전체 초기화</button>
+        </section>
+    </div>
+
+    <script>
+        let audioCtx = null;
+        let myChart = null;
+        const DB_NAME = 'workout_v7_db';
+
+        function unlockAudio() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContextClass();
+            }
+            if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+            const buffer = audioCtx.createBuffer(1, 1, 22050);
+            const source = audioCtx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioCtx.destination);
+            source.start(0);
+        }
+
+        document.addEventListener('touchstart', unlockAudio, { once: true });
+
+        // --- 메트로놈 ---
+        let isMetroPlaying = false, metroId = null;
+        function toggleMetronome() {
+            unlockAudio();
+            const btn = document.getElementById('metroBtn');
+            if (isMetroPlaying) { 
+                clearInterval(metroId); 
+                btn.innerText = "메트로놈 시작 (60 BPM)"; 
+                btn.classList.remove('stop');
+            } else { 
+                playSound(880, 0.1); 
+                metroId = setInterval(() => playSound(880, 0.1), 1000); 
+                btn.innerText = "메트로놈 정지"; 
+                btn.classList.add('stop');
+            }
+            isMetroPlaying = !isMetroPlaying;
+        }
+
+        // --- 타이머 ---
+        let timerId = null;
+        let timerEndTime = 0;
+
+        function startTimer(sec) {
+            unlockAudio();
+            if (timerId) clearInterval(timerId);
+            
+            timerEndTime = Date.now() + sec * 1000;
+            updateTimerUI(sec);
+
+            timerId = setInterval(() => {
+                const remainingMs = timerEndTime - Date.now();
+                const left = Math.ceil(remainingMs / 1000);
+
+                if (left <= 0) {
+                    clearInterval(timerId);
+                    timerId = null;
+                    document.getElementById('timerDisplay').innerText = "00:00";
+                    playSound(880, 0.2);
+                    setTimeout(() => playSound(880, 0.2), 250);
+                    setTimeout(() => playSound(1046.5, 0.4), 500);
+                    setTimeout(() => alert("휴식 끝! 다음 세트를 시작하세요."), 600);
+                } else {
+                    updateTimerUI(left);
+                }
+            }, 250);
+        }
+
+        function stopTimer() {
+            if (timerId) { clearInterval(timerId); timerId = null; }
+            document.getElementById('timerDisplay').innerText = "00:00";
+        }
+
+        function updateTimerUI(left) {
+            const m = String(Math.floor(left / 60)).padStart(2, '0');
+            const s = String(left % 60).padStart(2, '0');
+            document.getElementById('timerDisplay').innerText = `${m}:${s}`;
+        }
+
+        function playSound(freq, dur) {
+            if (!audioCtx) unlockAudio();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            g.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+            osc.connect(g); g.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + dur);
+        }
+
+        // --- 종목 선택 및 기록 미리보기 ---
+        function handleExerciseSelect() {
+            const selected = document.getElementById('exSelect').value;
+            const nameInput = document.getElementById('exName');
+            if (selected) {
+                nameInput.value = selected;
+                showPreviousRecords(selected);
+            } else {
+                nameInput.value = "";
+                document.getElementById('prevRecordPreview').style.display = "none";
+            }
+        }
+
+        function showPreviousRecords(exerciseName) {
+            const name = exerciseName.trim();
+            const previewBox = document.getElementById('prevRecordPreview');
+            
+            const exSelect = document.getElementById('exSelect');
+            const optionExists = Array.from(exSelect.options).some(opt => opt.value === name);
+            exSelect.value = optionExists ? name : "";
+
+            if (!name) {
+                previewBox.style.display = "none";
+                return;
+            }
+
+            const logs = JSON.parse(localStorage.getItem(DB_NAME) || "[]");
+            const matchingLogs = logs
+                .filter(l => l.name === name)
+                .sort((a, b) => b.timestamp - a.timestamp);
+
+            if (matchingLogs.length === 0) {
+                previewBox.style.display = "block";
+                previewBox.innerHTML = `🆕 <strong>${name}</strong>: 첫 기록입니다!`;
+                return;
+            }
+
+            const lastLog = matchingLogs[0];
+            const prevLog = matchingLogs[1];
+
+            // 세트별 상세 문자열 포맷팅
+            const formatSets = (sets) => sets.map(s => `${s.weight}kg×${s.reps}회`).join(', ');
+
+            let html = `<div class="prev-item">📌 <strong>바로 전 (${lastLog.date})</strong>: ${formatSets(lastLog.sets)} <small>[총 ${lastLog.volume.toLocaleString()}kg]</small></div>`;
+            
+            if (prevLog) {
+                html += `<div class="prev-item" style="color: #555;">🕒 <strong>그 전 (${prevLog.date})</strong>: ${formatSets(prevLog.sets)} <small>[총 ${prevLog.volume.toLocaleString()}kg]</small></div>`;
+            } else {
+                html += `<div class="prev-item" style="color: #777; font-size: 0.85rem;">🕒 그 전 기록은 없습니다.</div>`;
+            }
+
+            previewBox.innerHTML = html;
+            previewBox.style.display = "block";
+        }
+
+        // --- 세트별 중량/횟수 개별 입력창 생성 ---
+        function generateSetInputs() {
+            const setCount = parseInt(document.getElementById('exSets').value);
+            const container = document.getElementById('setInputsContainer');
+            container.innerHTML = "";
+            
+            if (setCount > 0 && setCount <= 30) {
+                container.style.display = "flex";
+                for (let i = 1; i <= setCount; i++) {
+                    container.innerHTML += `
+                        <div class="set-row">
+                            <span>${i}세트</span>
+                            <input type="number" class="set-weight" inputmode="decimal" step="any" placeholder="중량(kg)">
+                            <input type="number" class="set-reps" inputmode="numeric" pattern="[0-9]*" placeholder="횟수(회)">
+                        </div>`;
+                }
+            } else { 
+                container.style.display = "none"; 
+            }
+        }
+
+        // --- 데이터 관리 (세트별 중량 반영) ---
+        function addWorkoutLog() {
+            const name = document.getElementById('exName').value.trim();
+            const setRows = document.querySelectorAll('.set-row');
+            const date = new Date().toLocaleDateString();
+
+            if (!name || setRows.length === 0) return alert("종목명과 세트수를 입력해주세요.");
+
+            let totalVolume = 0;
+            let setsDetail = [];
+            let isValid = true;
+
+            setRows.forEach((row, index) => {
+                const wInput = row.querySelector('.set-weight');
+                const rInput = row.querySelector('.set-reps');
+                const weight = parseFloat(wInput.value);
+                const reps = parseInt(rInput.value);
+
+                if (isNaN(weight) || isNaN(reps)) {
+                    isValid = false;
+                } else {
+                    totalVolume += weight * reps;
+                    setsDetail.push({ set: index + 1, weight, reps });
+                }
+            });
+
+            if (!isValid) {
+                alert("모든 세트의 중량과 횟수를 정확히 입력해주세요.");
+                return;
+            }
+
+            const volume = Math.round(totalVolume * 10) / 10;
+            const logs = JSON.parse(localStorage.getItem(DB_NAME) || "[]");
+            
+            logs.push({ 
+                id: Date.now(), 
+                timestamp: new Date().getTime(), 
+                date, 
+                name, 
+                sets: setsDetail, 
+                volume 
+            });
+            
+            localStorage.setItem(DB_NAME, JSON.stringify(logs));
+            
+            document.getElementById('chartFilter').value = name;
+            refreshUI();
+            
+            // 입력창 초기화
+            document.getElementById('exSelect').value = "";
+            document.getElementById('exName').value = ""; 
+            document.getElementById('exSets').value = ""; 
+            document.getElementById('setInputsContainer').style.display = "none";
+            document.getElementById('prevRecordPreview').style.display = "none";
+        }
+
+        function deleteLog(id) {
+            if(!confirm("해당 기록을 삭제하시겠습니까?")) return;
+            let logs = JSON.parse(localStorage.getItem(DB_NAME) || "[]");
+            logs = logs.filter(l => l.id !== id);
+            localStorage.setItem(DB_NAME, JSON.stringify(logs));
+            refreshUI();
+            
+            const currentName = document.getElementById('exName').value;
+            if (currentName) showPreviousRecords(currentName);
+        }
+
+        // --- UI 업데이트 ---
+        function refreshUI() {
+            renderGroupedTable();
+            updateFilterOptions();
+            updateChart();
+        }
+
+        function renderGroupedTable() {
+            const logs = JSON.parse(localStorage.getItem(DB_NAME) || "[]");
+            const body = document.getElementById('logBody');
+            body.innerHTML = "";
+
+            const grouped = logs.reduce((acc, log) => {
+                if (!acc[log.name]) acc[log.name] = [];
+                acc[log.name].push(log);
+                return acc;
+            }, {});
+
+            Object.keys(grouped).sort().forEach(exerciseName => {
+                body.innerHTML += `<tr class="group-header"><td colspan="4">${exerciseName}</td></tr>`;
+
+                const sortedLogs = grouped[exerciseName].sort((a, b) => b.timestamp - a.timestamp);
+                sortedLogs.forEach(l => {
+                    // 세트별 상세 포맷 (예: 100kg×10, 90kg×8)
+                    const detailStr = l.sets.map(s => `${s.weight}kg×${s.reps}`).join(', ');
+                    body.innerHTML += `
+                        <tr>
+                            <td><small>${l.date}</small></td>
+                            <td style="text-align: left; padding-left: 8px;">${detailStr}</td>
+                            <td><strong>${l.volume.toLocaleString()}</strong></td>
+                            <td><button class="btn-del" onclick="deleteLog(${l.id})">삭제</button></td>
+                        </tr>
+                    `;
+                });
+            });
+        }
+
+        function updateFilterOptions() {
+            const logs = JSON.parse(localStorage.getItem(DB_NAME) || "[]");
+            const names = [...new Set(logs.map(l => l.name))].sort();
+            
+            const chartFilter = document.getElementById('chartFilter');
+            const currentChartVal = chartFilter.value;
+            chartFilter.innerHTML = '<option value="">분석할 종목 선택</option>' + 
+                names.map(name => `<option value="${name}" ${name === currentChartVal ? 'selected' : ''}>${name}</option>`).join('');
+
+            const exSelect = document.getElementById('exSelect');
+            const currentExVal = exSelect.value;
+            exSelect.innerHTML = '<option value="">-- 기존 종목 선택 (직접 입력) --</option>' + 
+                names.map(name => `<option value="${name}" ${name === currentExVal ? 'selected' : ''}>${name}</option>`).join('');
+        }
+
+        function updateChart() {
+            const selectedEx = document.getElementById('chartFilter').value;
+            const logs = JSON.parse(localStorage.getItem(DB_NAME) || "[]");
+            const filteredData = logs.filter(l => l.name === selectedEx).sort((a, b) => a.timestamp - b.timestamp);
+
+            const ctx = document.getElementById('volumeChart').getContext('2d');
+            if (myChart) myChart.destroy();
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: filteredData.map(d => d.date),
+                    datasets: [{
+                        label: `${selectedEx ? selectedEx + ' ' : ''}볼륨 추이 (kg)`,
+                        data: filteredData.map(d => d.volume),
+                        borderColor: '#007aff',
+                        pointBackgroundColor: '#007aff',
+                        pointRadius: 4,
+                        fill: false,
+                        tension: 0.2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: true } }
+                }
+            });
+        }
+
+        function clearAllLogs() { 
+            if(confirm("모든 데이터를 초기화하시겠습니까?")) { 
+                localStorage.removeItem(DB_NAME); 
+                document.getElementById('prevRecordPreview').style.display = "none";
+                refreshUI(); 
+            } 
+        }
+
+        refreshUI();
+    </script>
+</body>
+</html>
